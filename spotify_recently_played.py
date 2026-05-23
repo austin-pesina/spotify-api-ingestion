@@ -6,15 +6,25 @@ import datetime as dt
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 
+print("Script started", flush = True)
+
 # Load environment variables
 load_dotenv()
+
+print("Client ID exists:", "CLIENT_ID" in os.environ, flush = True)
+print("Client secret exists:", "CLIENT_SECRET" in os.environ, flush = True)
+
+
+print("Calling Spotify token endpoint", flush = True)
 
 # Authenticate Spotify API
 sp = spotipy.Spotify(auth_manager = SpotifyOAuth(
     client_id = os.environ['CLIENT_ID'],
     client_secret = os.environ['CLIENT_SECRET'],
     redirect_uri = 'http://127.0.0.1:8080',
-    scope = 'user-read-recently-played'
+    scope = 'user-read-recently-played',
+    cache_path = None,
+    open_browser = False
 ))
 
 # Fetch recently played tracks
