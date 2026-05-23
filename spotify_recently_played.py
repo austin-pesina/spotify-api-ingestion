@@ -11,8 +11,8 @@ load_dotenv()
 
 # Authenticate Spotify API
 sp = spotipy.Spotify(auth_manager = SpotifyOAuth(
-    client_id = os.getenv('CLIENT_ID'),
-    client_secret = os.getenv('CLIENT_SECRET'),
+    client_id = os.environ['CLIENT_ID'],
+    client_secret = os.environ['CLIENT_SECRET'],
     redirect_uri = 'http://127.0.0.1:8080',
     scope = 'user-read-recently-played'
 ))
