@@ -13,6 +13,7 @@ load_dotenv()
 
 print("Client ID exists:", "CLIENT_ID" in os.environ, flush = True)
 print("Client secret exists:", "CLIENT_SECRET" in os.environ, flush = True)
+print("Refresh token exists:", "SPOTIFY_REFRESH_TOKEN" in os.environ, flush = True)
 
 
 print("Calling Spotify token endpoint", flush = True)
@@ -27,6 +28,15 @@ sp = spotipy.Spotify(auth_manager = SpotifyOAuth(
     open_browser = False
 ))
 
+print("Refreshing Spotify access token", flush = True)
+
+token_info = auth_manager.refresh_access_token(
+    os.environ["SPOTIFY_REFRESH_TOKEN"]
+)
+
+sp = spotipy.Spotify(auth = token_info["access_token"])
+
+print("Calling recently played endpoint", flush = True)
 # Fetch recently played tracks
 results = sp.current_user_recently_played(limit = 50)
 
