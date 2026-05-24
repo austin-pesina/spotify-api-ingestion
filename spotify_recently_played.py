@@ -19,14 +19,14 @@ print("Refresh token exists:", "SPOTIFY_REFRESH_TOKEN" in os.environ, flush = Tr
 print("Calling Spotify token endpoint", flush = True)
 
 # Authenticate Spotify API
-sp = spotipy.Spotify(auth_manager = SpotifyOAuth(
-    client_id = os.environ['CLIENT_ID'],
-    client_secret = os.environ['CLIENT_SECRET'],
-    redirect_uri = 'http://127.0.0.1:8080',
-    scope = 'user-read-recently-played',
+auth_manager = SpotifyOAuth(
+    client_id = os.environ["CLIENT_ID"],
+    client_secret = os.environ["CLIENT_SECRET"],
+    redirect_uri = "http://127.0.0.1:8080",
+    scope = "user-read-recently-played",
     cache_path = None,
     open_browser = False
-))
+)
 
 print("Refreshing Spotify access token", flush = True)
 
