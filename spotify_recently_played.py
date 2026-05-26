@@ -1,10 +1,16 @@
+# %%
+import os
+import datetime
+
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
-import os
-import datetime as dt
-from sqlalchemy import create_engine
+import pyarrow as pa
+import snowflake.connector
+from snowflake.connector.pandas_tools import write_pandas
 from dotenv import load_dotenv
+
+# %% 
 
 print("Script started", flush = True)
 
@@ -18,6 +24,7 @@ print("Refresh token exists:", "REFRESH_TOKEN" in os.environ, flush = True)
 
 print("Calling Spotify token endpoint", flush = True)
 
+# %%
 # Authenticate Spotify API
 auth_manager = SpotifyOAuth(
     client_id = os.environ["CLIENT_ID"],
@@ -38,8 +45,11 @@ sp = spotipy.Spotify(auth = token_info["access_token"])
 
 print("Calling recently played endpoint", flush = True)
 # Fetch recently played tracks
-results = sp.current_user_recently_played(limit = 50)
+results = sp.current_user_recently_played(limit=50)
+print(results)
 
+
+# %%
 song_list = []
 
 # Loop through dictionary and  write to dataframe
@@ -47,18 +57,67 @@ for item in results['items']:
     track = item['track']
     song = track['name']
     artists = ', '.join(artist['name'] for artist in track['artists'])
+    main_artist = track['artists'][0]['name']
+    featured_artists = ', '.join(artist['name'] for artist in track['artists'][1:])
     album = track['album']['name']
-    # isrc = track['external_ids']['isrc']
+    release_date = track['album']['release_date']
     played_at = pd.to_datetime(item['played_at']).tz_convert('America/Chicago')
     
     song_list.append({
         'song': song,
         'artists': artists,
+        'main_artist': main_artist,
+        'featured_artists': featured_artists,
         'album': album,
-        # 'isrc': isrc,
+        'release_date': release_date,
         'played_at': played_at
     })
 
-df = pd.DataFrame(song_list)
+recently_played = pd.DataFrame(song_list)
+recently_played['played_at'] = pd.to_datetime(recently_played['played_at'])
 
-print(df.head())
+print(f'Scraped {len(recently_played)} records.')
+
+# %%
+def sf_connect():
+    cnx = snowflake.connector.connect(
+        user=os.getenv('SNOWFLAKE_USER'),
+        password=os.getenv('SNOWFLAKE_PASSWORD'),
+        account=os.getenv('SNOWFLAKE_ACCOUNT'),
+        warehouse=os.getenv('SNOWFLAKE_WAREHOUSE'),
+        database=os.getenv('SNOWFLAKE_DATABASE'),
+        schema=os.getenv('SNOWFLAKE_SCHEMA'),
+        role=os.getenv('SNOWFLAKE_ROLE')
+    )
+    return cnx
+
+# %%
+with sf_connect() as conn:
+
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT MAX(played_at)
+            FROM SPOTIFY.RAW.RECENTLY_PLAYED
+        """)
+        
+        max_date = cur.fetchone()[0]
+
+    if max_date is None:
+        recently_played_to_sf = recently_played.copy()
+        recently_played_to_sf['last_updated'] = datetime.datetime.now()
+    else:
+        recently_played_to_sf = recently_played[recently_played['played_at'] > max_date]
+        recently_played_to_sf['last_updated'] = datetime.datetime.now()
+
+    write_pandas(
+        conn=conn,
+        df=recently_played_to_sf,
+        table_name='RECENTLY_PLAYED',
+        schema='RAW',
+        database='SPOTIFY',
+        auto_create_table=False,
+        quote_identifiers=False,
+        use_logical_type=True
+    )
+# %%
+print(f'Added {len(recently_played_to_sf)} records to Snowflake.')
