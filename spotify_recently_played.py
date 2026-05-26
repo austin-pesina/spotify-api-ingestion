@@ -74,7 +74,11 @@ for item in results['items']:
     })
 
 recently_played = pd.DataFrame(song_list)
-recently_played['played_at'] = pd.to_datetime(recently_played['played_at'])
+recently_played['played_at'] = (pd.to_datetime(recently_played['played_at'])
+                                .dt.tz_convert('UTC')
+                                .dt.tz_localize(None)
+                                )
+recently_played['last_updated'] = datetime.datetime.now()
 
 print(f'Scraped {len(recently_played)} records.')
 
@@ -104,10 +108,8 @@ with sf_connect() as conn:
 
     if max_date is None:
         recently_played_to_sf = recently_played.copy()
-        recently_played_to_sf['last_updated'] = datetime.datetime.now()
     else:
         recently_played_to_sf = recently_played[recently_played['played_at'] > max_date]
-        recently_played_to_sf['last_updated'] = datetime.datetime.now()
 
     write_pandas(
         conn=conn,
@@ -121,3 +123,5 @@ with sf_connect() as conn:
     )
 # %%
 print(f'Added {len(recently_played_to_sf)} records to Snowflake.')
+
+# %%
