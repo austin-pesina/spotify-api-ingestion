@@ -11,7 +11,6 @@ from snowflake.connector.pandas_tools import write_pandas
 from dotenv import load_dotenv
 
 # %% 
-
 print("Script started", flush = True)
 
 # Load environment variables
@@ -46,8 +45,6 @@ sp = spotipy.Spotify(auth = token_info["access_token"])
 print("Calling recently played endpoint", flush = True)
 # Fetch recently played tracks
 results = sp.current_user_recently_played(limit=50)
-print(results)
-
 
 # %%
 song_list = []
